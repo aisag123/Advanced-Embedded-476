@@ -13,9 +13,10 @@ Black = LCD.RGB(0, 0, 0)
 White = LCD.RGB(250, 250, 250)
 
 BANK = 100.0
+pass_bet = -1
+POINT = -1
 
 start_flag = False
-ON_FLAG = False
 OFF_FLAG = True
 
 ble = bluetooth.BLE()
@@ -24,8 +25,7 @@ sp = BLESimplePeripheral(ble)
 LED0 = Pin("LED", Pin.OUT)
 
 def on_rx(data):
-    global BANK
-    global OFF_FLAG
+    global BANK, OFF_FLAG, pass_bet
     print("Data received: ", data)
     parts = data.decode().strip().upper().split(',')
     if OFF_FLAG == True:
@@ -42,14 +42,15 @@ def on_rx(data):
                 return
             print('Bank: ', BANK)
             print('Bet: ', bet)
+            bet = pass_bet
             BANK -= bet
             print('Bank after bet: ', BANK)
-            result = roll()
-            print('roll: ', result)
             #this calls the handle roll win/loss logic
+            pass_handler()
         else:
             print('invalid: use (pass, #)')
-    elif data == b'place':
+    elif data == 'PLACE':
+        #place, bet, number - only if the game is ON
         print('place bet')
 
 def btn_irq(pin):
@@ -75,7 +76,22 @@ def roll():
     return first_die + second_die
 
 def pass_handler():
-    ...
+    global BANK, pass_bet, OFF_FLAG
+    result = roll()
+    print('roll: ', result)
+    if result in (7, 11):
+        print('you win 2x')
+        BANK += 2 * pass_bet
+        pass_bet = 0
+        print('bank after win: ', BANK)
+    elif result in (2, 3, 12):
+        print('you lose pass bet is gone')
+        pass_bet = 0
+        print(BANK)
+    else:
+        POINT = result
+        OFF_FLAG = False
+        print('point is set to: ', POINT)
     
 def place_handler():
     ...
